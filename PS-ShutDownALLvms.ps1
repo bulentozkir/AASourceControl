@@ -3,5 +3,5 @@ $cred
 $subscription = Get-AutomationVariable -Name 'ContosoSubscriptionID'
 $subscription 
 Login-AzureRMAccount -Credential $cred -SubscriptionId $subscription
-Get-AzureRMVM -ResourceGroupName Contoso | Stop-AzureRMVm -Force
+Get-AzureRMVM -ResourceGroupName contosotestbox-ggw6gd2x | Stop-AzureRMVm -Force
 Get-AzureRMVM -ResourceGroupName ContosoDSC | Stop-AzureRMVm -Force
