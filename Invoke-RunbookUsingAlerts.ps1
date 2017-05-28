@@ -1,6 +1,7 @@
+#################################################################
 workflow Invoke-RunbookUsingAlerts
 {
-	param (     
+    param (     
         [object]$WebhookData 
     ) 
  
@@ -35,25 +36,50 @@ workflow Invoke-RunbookUsingAlerts
         Write-Output $AlertContext.resourceId 
         Write-Output $AlertContext.timestamp 
  
-        # Act on the AlertContext data, in our case restarting the VM. 
-        # Authenticate to your Azure subscription using Organization ID to be able to restart that Virtual Machine. 
-        $cred = Get-AutomationPSCredential -Name "ContosoAccount" 
-        Add-AzureAccount -Credential $cred 
-        Select-AzureSubscription -subscriptionName "Azure Pass" 
+#====================START OF CONNECTION SETUP======================
+$connectionName = "AzureRunAsConnection"
+$SubId = Get-AutomationVariable -Name 'AzureSubscriptionId'
+try
+{
+   # Get the connection "AzureRunAsConnection "
+   $servicePrincipalConnection=Get-AutomationConnection -Name $connectionName         
+
+   "Logging in to Azure..."
+   Add-AzureRmAccount `
+     -ServicePrincipal `
+     -TenantId $servicePrincipalConnection.TenantId `
+     -ApplicationId $servicePrincipalConnection.ApplicationId `
+     -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
+   "Setting context to a specific subscription"  
+   Set-AzureRmContext -SubscriptionId $SubId             
+}
+catch {
+    if (!$servicePrincipalConnection)
+    {
+       $ErrorMessage = "Connection $connectionName not found."
+       throw $ErrorMessage
+     } else{
+        Write-Error -Message $_.Exception
+        throw $_.Exception
+     }
+}
+#====================END OF CONNECTION SETUP=======================
  
         #Check the status property of the VM
         Write-Output "Status of VM before taking action"
-        Get-AzureVM -Name $AlertContext.resourceName -ServiceName $AlertContext.resourceName
+        $armVM = Get-AzureRMVM -Status -ResourceGroupName $AlertContext.resourceGroupName -Name $AlertContext.resourceName
+        $armVM.PowerState
         Write-Output "Restarting VM"
  
         # Restart the VM by passing VM name and Service name which are same in this case
-        Restart-AzureVM -ServiceName $AlertContext.resourceName -Name $AlertContext.resourceName 
+        $armVM | Restart-azureRMVM
         Write-Output "Status of VM after alert is active and takes action"
-        Get-AzureVM -Name $AlertContext.resourceName -ServiceName $AlertContext.resourceName
+        $armVM = Get-AzureRMVM -Status -ResourceGroupName $AlertContext.resourceGroupName -Name $AlertContext.resourceName
+        $armVM.PowerState
     } 
     else  
     { 
         Write-Error "This runbook is meant to only be started from a webhook."  
     }  
-
 }
+########################################################################
