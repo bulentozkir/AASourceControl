@@ -23,5 +23,4 @@ $Newuser = new-Aduser -Name $Username -AccountPassword $SecPassword -PasswordNev
 get-ADUser -Identity $Username
 }-psComputerName $Server -psCredential $PSUserCred 
  
-
 }
